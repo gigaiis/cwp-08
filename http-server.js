@@ -15,7 +15,7 @@ function workers(req, res, payload, cb) {
     connection.write(JSON.stringify( { key : 'worker', method : 'get' } ));
 	connection.on('data', (data) => {
 	    let d = JSON.parse(data);
-	    if (d.meta === 'get') {
+	    if (d.do === 'get') {
 	        d.workers.forEach((element) => {
 	            let b = new Buffer(element.numbers);
 	            element.numbers = b.toString();
@@ -30,10 +30,10 @@ function add(req, res, payload, cb) {
         connection.write(JSON.stringify( { key : 'worker', method : 'start', interval : payload.x } ));
         connection.on('data', (data) => {
             let d = JSON.parse(data);
-            if (d.meta = 'add') cb(null, d);
+            if (d.do = 'add') cb(null, d);
         });
     }
-    else cb( { code: 405, message: `Can't create worker` } );
+    else cb( { code: 404, message: `Key \'x\' not found` } );
 }
 
 function remove(req, res, payload, cb) {
@@ -41,12 +41,16 @@ function remove(req, res, payload, cb) {
         connection.write(JSON.stringify( { key : 'worker', method : 'remove', id : payload.id } ));
         connection.on('data', (data) => {
             let d = JSON.parse(data);
-            if (d.meta === 'remove') {
-                let b = new Buffer(d.numbers);
+            if (d.do === 'remove') {
+            	// console.log('remove recv: ' + data);
+            	let b;
+            	if (d.numbers === undefined) b = [];
+                else b = new Buffer(d.numbers);
                 cb(null, { id: d.id, startedOn: d.startedOn, numbers: b.toString() } );
             }
-        })
+        });
     }
+    else cb( { code: 404, message: `Key \'id\' not found` } );
 }
 
 connection.connect(tcp_port, function () {
