@@ -12,15 +12,41 @@ const handlers = {
 };
 
 function workers(req, res, payload, cb) {
-    
+    connection.write(JSON.stringify( { key : 'worker', method : 'get' } ));
+	connection.on('data', (data) => {
+	    let d = JSON.parse(data);
+	    if (d.meta === 'get') {
+	        d.workers.forEach((element) => {
+	            let b = new Buffer(element.numbers);
+	            element.numbers = b.toString();
+	        });
+	        cb(null, d);
+	    }
+	});
 }
 
 function add(req, res, payload, cb) {
-    
+    if (payload.x !== undefined) {
+        connection.write(JSON.stringify( { key : 'worker', method : 'start', interval : payload.x } ));
+        connection.on('data', (data) => {
+            let d = JSON.parse(data);
+            if (d.meta = 'add') cb(null, d);
+        });
+    }
+    else cb( { code: 405, message: `Can't create worker` } );
 }
 
 function remove(req, res, payload, cb) {
-    
+    if (payload.id !== undefined) {
+        connection.write(JSON.stringify( { key : 'worker', method : 'remove', id : payload.id } ));
+        connection.on('data', (data) => {
+            let d = JSON.parse(data);
+            if (d.meta === 'remove') {
+                let b = new Buffer(d.numbers);
+                cb(null, { id: d.id, startedOn: d.startedOn, numbers: b.toString() } );
+            }
+        })
+    }
 }
 
 connection.connect(tcp_port, function () {
@@ -32,11 +58,11 @@ const server = http.createServer((req, res) => {
         const handler = getHandler(req.url);
         handler(req, res, payload, (err, result) => {
             if (err) {
-                res.writeHead(err.code, {'Content-Type' : 'application/json'});
+                res.writeHead(err.code, {'Content-Type': 'application/json'});
                 res.end( JSON.stringify(err) );
                 return;
             }
-            res.writeHead(200, {'Content-Type': 'application/json'});
+            res.writeHead(200, {'Content-Type': 'application/json'} );
             res.end(JSON.stringify(result, null, "\t"));
         });
     });
